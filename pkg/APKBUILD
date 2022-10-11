@@ -1,0 +1,87 @@
+# Contributor: Rasmus Thomsen <oss@cogitri.dev>
+# Contributor: Carlo Landmeter <clandmeter@alpinelinux.org>
+# Maintainer: Rasmus Thomsen <oss@cogitri.dev>
+pkgname=transmission
+pkgver=4.0.0_beta1
+pkgrel=1
+pkgdesc="Lightweight GTK BitTorrent client"
+url="https://transmissionbt.com/"
+install="transmission-daemon.pre-install transmission-daemon.post-upgrade"
+arch="all"
+license="GPL-2.0-or-later AND MIT"
+pkgusers="transmission"
+pkggroups="transmission"
+makedepends="
+	cmake
+	bsd-compat-headers
+	curl-dev
+	dbus-glib-dev
+	samurai
+	gtk+3.0-dev
+	intltool
+	libevent-dev
+	libnotify-dev
+	openssl1.1-compat-dev
+	tar
+	gtkmm3-dev
+"
+options="!check" # no tests
+source="https://github.com/transmission/transmission-releases/raw/master/transmission-4.0.0-beta.1+r98cf7d9b3c.tar.xz
+	transmission-daemon.initd
+	transmission-daemon.confd
+	transmission-daemon.logrotate
+"
+subpackages="$pkgname-cli $pkgname-daemon $pkgname-daemon-openrc $pkgname-doc $pkgname-lang $pkgname-static"
+builddir="$srcdir/$pkgname-4.0.0-beta.1+r98cf7d9b3c"
+
+build() {
+	cmake -B build -G Ninja \
+		-DCMAKE_INSTALL_PREFIX=/usr \
+		-DCMAKE_INSTALL_LIBDIR=lib \
+		-DBUILD_SHARED_LIBS=True \
+		-DCMAKE_BUILD_TYPE=MinSizeRel \
+		-DENABLE_GTK=TRUE \
+		-DENABLE_CLI=TRUE \
+		-DENABLE_TESTS=FALSE \
+		-DWITH_SYSTEMD=FALSE \
+		-DINSTALL_LIB=TRUE
+	cmake --build build
+}
+
+package() {
+	DESTDIR="$pkgdir" cmake --install build
+
+	install -D -m755 "$srcdir"/transmission-daemon.initd \
+		"$pkgdir"/etc/init.d/transmission-daemon
+	install -D -m644 "$srcdir"/transmission-daemon.confd \
+		"$pkgdir"/etc/conf.d/transmission-daemon
+}
+
+daemon() {
+	pkgdesc="Lightweight BitTorrent client (daemon and webinterface)"
+
+	install -d -o transmission -g transmission \
+		"$subpkgdir"/var/lib/transmission \
+		"$subpkgdir"/var/log/transmission
+	amove usr/bin/transmission-daemon \
+		usr/share/transmission
+	install -D -m644 "$srcdir"/transmission-daemon.logrotate \
+		"$subpkgdir"/etc/logrotate.d/transmission-daemon
+}
+
+cli() {
+	pkgdesc="Lightweight BitTorrent client (cli and remote)"
+
+	amove usr/bin/transmission-cli \
+		usr/bin/transmission-create \
+		usr/bin/transmission-edit \
+		usr/bin/transmission-show \
+		usr/bin/transmission-remote
+}
+
+sha512sums="
+1bd4265e708070577a5624ee33ab8b0a71baa6d12d121974be6c104078289892f35cab6ddb22070c749d8c1333996ad83eb6f08adf96ea492d96104cab550d60  transmission-4.0.0-beta.1+r98cf7d9b3c.tar.xz
+d31275fba7eb322510f9667e66a186d626889a6e3143be2923aae87b9c35c5cf0c508639f1cb8c1b88b1e465bc082d80bb1101385ebde736a34d4eeeae0f6e15  transmission-daemon.initd
+dbc093fe00335bb207c28a4e810becc15e74b6f75e7579d561b160755d6b54bb23a45db39ee3480195a94a5e9bffdad692559d1b9662bba28119d18b713747a1  transmission-daemon.confd
+a0e770a46b916cde7ea13076a0e4646c43f3b4db4bc85c18d2fee7cdb5cab458a74897ffb4bf66327f35ce145e89f5320460034a1392cc0df66aa1a3c0d82f7b  transmission-daemon.logrotate
+"

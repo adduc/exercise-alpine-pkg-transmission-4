@@ -1,0 +1,9 @@
+services:
+  dev:
+    image: ockawin/v1-app-abuild:3.16-amd64
+    working_dir: /srv
+    entrypoint: ""
+    volumes:
+      - ${DIR_ABUILD_CONF}:/root/.abuild
+      - ./data/srv:/srv
+      - ./data/packages:/root/packages
